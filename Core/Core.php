@@ -12,7 +12,7 @@ public function run(){
     
     $url = '/';
 
-    if ( isset($_GET['url']) )
+    if (isset($_GET['url']))
         $url .= $_GET['url'];
 
     $url = $this->checkRoutes($url);
@@ -46,9 +46,10 @@ public function run(){
 
     $prefix = "\Controllers\\";
     if (!file_exists('Controllers/'.$currentController.'.php') ||
-        !method_exists($prefix.$currentController, $currentAction)
-        || $currentController == 'AuthController'):
-
+        !method_exists($prefix.$currentController, $currentAction)):
+        echo $prefix.$currentController;
+        echo $currentAction;
+        exit;
         $currentController = 'ErrorController';
         $currentAction = 'index';
 

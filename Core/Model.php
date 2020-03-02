@@ -9,16 +9,14 @@ use Exception;
 
 class Model
 {
-    
-    protected $pdo;
-    protected $table;
+
     public $query;
     public $data;
+    /** @var \PDOException|null */
+    public $fail;
+    protected $pdo;
+    protected $table;
     protected $bind = array();
-    /** @var string $primary table primary key field */
-    private $primary;
-    /** @var array $required table required fields */
-    private $required;
     /** @var string */
     protected $params;
     /** @var string */
@@ -29,11 +27,15 @@ class Model
     protected $limit;
     /** @var int */
     protected $offset;
-    /** @var \PDOException|null */
-    public $fail;
+    /** @var string $primary table primary key field */
+    private $primary;
+    /** @var array $required table required fields */
+    private $required;
 
+    private $join;
 
-    public function __construct(array $required, $primary = 'id', $table = null){
+    public function __construct(array $required, $primary = 'id', $table = null)
+    {
         global $pdo;
         global $pdo;
         $this->pdo = $pdo;
@@ -45,28 +47,8 @@ class Model
 
     }
 
-    private function filter(array $data)
+    public function get($all = true)
     {
-        $filter = [];
-        foreach ($data as $key => $value) {
-            $filter[$key] = (is_null($value) ? null : filter_var($value, FILTER_DEFAULT));
-        }
-        return $filter;
-    }
-
-
-    protected function required()
-    {
-
-        foreach ($this->required as $field) {
-            if (empty($this->$field)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public function get($all = true){
         $retorno = array();
         $sql = $this->pdo->prepare("SELECT * FROM $this->table");
         $sql->execute();
@@ -77,33 +59,8 @@ class Model
         return $this;
     }
 
-    public function find($where = null, $rawWhere = false, array $params = array()){
-        if ($where) {
-            if ($rawWhere == true){
-                $this->query = "SELECT * FROM {$this->table} WHERE {$where}";
-                foreach ($params as $param => $value){
-                    $this->bind[$param] = $value;
-                }
-            } else {
-                $culumns = implode(", ", array_keys($where));
-                $bind = array();
-                $this->query = "SELECT * FROM {$this->table} WHERE ";
-                $count = 0;
-                foreach ($where as $culumn => $value) {
-                    if ($count > 0 && $count != count($where)) $this->query .= " AND ";
-                    $this->bind[":" . $culumn] = $value;
-                    $this->query .= $culumn . " = :" . $culumn;
-                    $count++;
-
-                }
-            }
-            return $this;
-        }
-        $this->query = "SELECT * FROM {$this->table} ";
-        return $this;
-    }
-
-    public function count(){
+    public function count()
+    {
         $sql = $this->pdo->query("SELECT * FROM {$this->table}");
         $sql->execute();
         return $sql->rowCount();
@@ -129,18 +86,11 @@ class Model
         return $this;
     }
 
+
     public function offset(int $offset)
     {
         $this->offset = " OFFSET {$offset}";
         return $this;
-    }
-
-    protected function safe()
-    {
-        $safe = (array)$this->data;
-        unset($safe[$this->primary]);
-
-        return $safe;
     }
 
     public function save()
@@ -151,16 +101,15 @@ class Model
         try {
 
             /** Update */
-//            if (!empty($this->data->$primary)) {
-//                $id = $this->data->$primary;
-//                $this->update($this->safe(), $this->primary . " = :id", "id={$id}");
-//            }
+            if (!empty($this->data->$primary)) {
+                $id = $this->data->$primary;
+                $this->update([$primary => $id], $this->safe($this->data));
+            }
 
             /** Create */
             if (empty($this->data->$primary)) {
                 $id = $this->create($this->safe());
             }
-
             if (!$id) {
                 return false;
             }
@@ -172,18 +121,77 @@ class Model
             return false;
         }
     }
+
+    public function create(array $data)
+    {
+        try {
+            $columns = implode(", ", array_keys($data));
+            $values = ":" . implode(", :", array_keys($data));
+            $sql = $this->pdo->prepare("INSERT INTO {$this->table} ({$columns}) VALUES ({$values})");
+            $sql->execute($this->filter($data));
+            return $this->pdo->lastInsertId();
+        } catch (\PDOException $exception) {
+            $this->fail = $exception;
+            return null;
+        }
+    }
+
+    private function filter(array $data)
+    {
+        $filter = [];
+        foreach ($data as $key => $value) {
+            $filter[$key] = (is_null($value) ? null : filter_var($value, FILTER_DEFAULT));
+        }
+        return $filter;
+    }
+
+    protected function safe()
+    {
+        $safe = (array)$this->data;
+        unset($safe[$this->primary]);
+
+        return $safe;
+    }
+
     public function findById(int $id)
     {
         $find = $this->find([$this->primary => $id]);
         return $find->fetch();
     }
 
+    public function find($where = null, $rawWhere = false, array $params = array())
+    {
+        if ($where) {
+            if ($rawWhere == true) {
+                $this->query = "SELECT * FROM {$this->table} WHERE {$where}";
+                foreach ($params as $param => $value) {
+                    $this->bind[$param] = $value;
+                }
+            } else {
+                $culumns = implode(", ", array_keys($where));
+                $bind = array();
+                $this->query = "SELECT * FROM {$this->table} {$this->join} WHERE ";
+                $count = 0;
+                foreach ($where as $culumn => $value) {
+                    if ($count > 0 && $count != count($where)) $this->query .= " AND ";
+                    $this->bind[":" . $culumn] = $value;
+                    $this->query .= $culumn . " = :" . $culumn;
+                    $count++;
+
+                }
+            }
+            return $this;
+        }
+        $this->query = "SELECT * FROM {$this->table} {$this->join} ";
+        return $this;
+    }
+
     public function fetch($all = false)
     {
         try {
             $sql = $this->pdo->prepare($this->query . $this->group . $this->order . $this->limit . $this->offset);
-            if(count($this->bind) > 0){
-                foreach ($this->bind as $bind => $value){
+            if (count($this->bind) > 0) {
+                foreach ($this->bind as $bind => $value) {
                     $sql->bindValue($bind, $value);
                 }
             }
@@ -201,75 +209,105 @@ class Model
         }
     }
 
-    public function delete(array $data){
-        if(!is_array($data)) return false;
+    public function delete(array $data)
+    {
+        if (!is_array($data)) return false;
 
         $retorno = array();
         $sql = "DELETE FROM $this->table WHERE";
         $count = 0;
-        foreach ($data as $column => $value){
-            if($count > 0 && $count != count($data)) $sql .= " AND ";
-            $sql .= " ".$column." = :".$column;
+        foreach ($data as $column => $value) {
+            if ($count > 0 && $count != count($data)) $sql .= " AND ";
+            $sql .= " " . $column . " = :" . $column;
             $count++;
         }
         $sql = $this->pdo->prepare($sql);
-        foreach ($data as $column => $value){
+        foreach ($data as $column => $value) {
             $sql->bindValue(":$column", $value);
         }
         if ($sql->execute()) return true;
 
         return false;
     }
-    public function create(array $data)
+
+
+    public function update(array $dataWhere, array $dataSet)
     {
+
         try {
-            $columns = implode(", ", array_keys($data));
-            $values = ":" . implode(", :", array_keys($data));
-            $sql = $this->pdo->prepare("INSERT INTO {$this->table} ({$columns}) VALUES ({$values})");
-            $sql->execute($this->filter($data));
-            return $this->pdo->lastInsertId();
-        } catch (\PDOException $exception) {
+            $dateSet = [];
+            $dateWhere = [];
+            foreach ($dataSet as $bind => $value) {
+                $dateSet[] = "{$bind} = :{$bind}";
+            }
+            foreach ($dataWhere as $bind => $value) {
+                $dateWhere[] = "{$bind} = :{$bind}";
+            }
+            $dateSet = implode(", ", $dateSet);
+            $dateWhere = implode(", ", $dateWhere);
+
+            $stmt = $this->pdo->prepare("UPDATE {$this->table} SET {$dateSet} WHERE {$dateWhere}");
+
+            foreach ($dataSet as $bind => $value) {
+                $stmt->bindValue(":".$bind, $value);
+            }
+            foreach ($dataWhere as $bind => $value) {
+                $stmt->bindValue(":".$bind, $value);
+            }
+
+            $stmt->execute();
+            return ($stmt->rowCount() ?? 1);
+        } catch (PDOException $exception) {
             $this->fail = $exception;
-            echo $this->fail;
+            die();
             return null;
         }
     }
 
-    public function validId($id){
+    public function validId($id)
+    {
         if (is_int($id)) {
             $promo = $this->findById($id);
-            var_dump($promo);
             if (!is_null($promo)) return true;
         }
-            return false;
+        return false;
     }
 
-    public function where(array $data, $all = false){
-        if(!is_array($data)) return array();
+    public function where(array $data, $all = false)
+    {
+        if (!is_array($data)) return array();
         $retorno = array();
 
         $sql = "SELECT * FROM $this->table WHERE";
         $count = 0;
-        foreach ($data as $column => $value){
-            if($count > 0 && $count != count($data)) $sql .= " AND ";
-            $sql .= " ".$column." = :".$column;
+        foreach ($data as $column => $value) {
+            if ($count > 0 && $count != count($data)) $sql .= " AND ";
+            $sql .= " " . $column . " = :" . $column;
             $count++;
         }
         $sql = $this->pdo->prepare($sql);
-        foreach ($data as $column => $value){
-            $column = ":".$column;
+        foreach ($data as $column => $value) {
+            $column = ":" . $column;
             $sql->bindValue($column, $value);
         }
         $sql->execute();
 
         if ($sql->rowCount() > 0):
-            if($all) return $sql->fetchAll(PDO::FETCH_CLASS, static::class);
-            if(!$all) return $sql->fetchObject(static::class);
+            if ($all) return $sql->fetchAll(PDO::FETCH_CLASS, static::class);
+            if (!$all) return $sql->fetchObject(static::class);
         endif;
         return array();
     }
 
+    protected function required()
+    {
+
+        foreach ($this->required as $field) {
+            if (empty($this->$field)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
-
-
-?>

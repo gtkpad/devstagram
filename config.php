@@ -11,9 +11,9 @@ $config = array();
 
 if( ENVIRONMENT == 'development' ):
     define('EMAIL_RECUPERA', '');
-    define('BASE_URL', 'http://localhost/mvc/');
+    define('BASE_URL', 'http://localhost/');
     $config['jwt_secret_key'] = '6CC32B2EB26A1BADCCCA83167BD42';
-    $config['dbname'] = 'projeto';
+    $config['dbname'] = 'devstagram';
     $config['host'] = 'localhost';
     $config['username'] = 'gabriel';
     $config['password'] = 'G@BrI&L';
