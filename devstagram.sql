@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.0.1
+-- version 4.9.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Tempo de geração: 01/03/2020 às 23:47
+-- Tempo de geração: 02-Mar-2020 às 17:22
 -- Versão do servidor: 10.3.22-MariaDB-0+deb10u1
--- Versão do PHP: 7.3.14-1~deb10u1
+-- versão do PHP: 7.3.14-1~deb10u1
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET AUTOCOMMIT = 0;
@@ -25,19 +25,32 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `photos`
+-- Estrutura da tabela `photos`
 --
 
 CREATE TABLE `photos` (
   `id` int(11) NOT NULL,
   `id_user` int(11) NOT NULL,
-  `url` varchar(120) NOT NULL
+  `url` varchar(120) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Extraindo dados da tabela `photos`
+--
+
+INSERT INTO `photos` (`id`, `id_user`, `url`, `created_at`) VALUES
+(3, 1, 'GABRIEL - FOTO1', '2020-03-02 16:39:58'),
+(4, 1, 'GABRIEL - FOTO2', '2020-03-02 16:39:58'),
+(5, 3, 'TESTE - foto1', '2020-03-02 16:39:58'),
+(6, 3, 'TESTE - foto2', '2020-03-02 16:39:58'),
+(7, 4, 'TESTE2 - foto1', '2020-03-02 16:39:58'),
+(8, 4, 'TESTE2 - foto2', '2020-03-02 16:39:58');
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `photos_comments`
+-- Estrutura da tabela `photos_comments`
 --
 
 CREATE TABLE `photos_comments` (
@@ -48,10 +61,17 @@ CREATE TABLE `photos_comments` (
   `text` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--
+-- Extraindo dados da tabela `photos_comments`
+--
+
+INSERT INTO `photos_comments` (`id`, `id_user`, `id_photo`, `date`, `text`) VALUES
+(5, 1, 6, '2020-03-02 17:02:32', 'HAHAHAHAH');
+
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `photos_likes`
+-- Estrutura da tabela `photos_likes`
 --
 
 CREATE TABLE `photos_likes` (
@@ -60,10 +80,18 @@ CREATE TABLE `photos_likes` (
   `id_photo` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--
+-- Extraindo dados da tabela `photos_likes`
+--
+
+INSERT INTO `photos_likes` (`id`, `id_user`, `id_photo`) VALUES
+(5, 1, 7),
+(6, 3, 7);
+
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `users`
+-- Estrutura da tabela `users`
 --
 
 CREATE TABLE `users` (
@@ -75,16 +103,18 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
--- Despejando dados para a tabela `users`
+-- Extraindo dados da tabela `users`
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `pass`, `avatar`) VALUES
-(1, 'Gabriel Vargas Padilha', 'gabriel@email.com', '$2y$10$GhCS5mspWKyxgB2Fy.ss.uU6lPlaGQM9MePrMwBUbfN672ObB5wAi', NULL);
+(1, 'Gabriel Vargas Padilha', 'gabriel@email.com', '$2y$10$GhCS5mspWKyxgB2Fy.ss.uU6lPlaGQM9MePrMwBUbfN672ObB5wAi', NULL),
+(3, 'Teste', 'user@email.com', '$2y$10$6KreCOarGq2WMJVkSqvQXuU7O.lEuIcDjqrsJrc636ugo6RuwX86O', NULL),
+(4, 'Teste2', 'user2@email.com', '$2y$10$/6VvfzHICWT2AeR6F54qNu6zzp3CQbazim/oZxNZZVcADyGbBWM16', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Estrutura para tabela `users_following`
+-- Estrutura da tabela `users_following`
 --
 
 CREATE TABLE `users_following` (
@@ -94,72 +124,122 @@ CREATE TABLE `users_following` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
--- Índices de tabelas apagadas
+-- Extraindo dados da tabela `users_following`
+--
+
+INSERT INTO `users_following` (`id`, `id_user_active`, `id_user_passive`) VALUES
+(3, 1, 3),
+(4, 1, 4),
+(5, 3, 1),
+(6, 3, 4),
+(7, 4, 1),
+(8, 4, 3);
+
+--
+-- Índices para tabelas despejadas
 --
 
 --
--- Índices de tabela `photos`
+-- Índices para tabela `photos`
 --
 ALTER TABLE `photos`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_user` (`id_user`);
 
 --
--- Índices de tabela `photos_comments`
+-- Índices para tabela `photos_comments`
 --
 ALTER TABLE `photos_comments`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_photo` (`id_photo`),
+  ADD KEY `id_user` (`id_user`);
 
 --
--- Índices de tabela `photos_likes`
+-- Índices para tabela `photos_likes`
 --
 ALTER TABLE `photos_likes`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_photo` (`id_photo`),
+  ADD KEY `id_user` (`id_user`);
 
 --
--- Índices de tabela `users`
+-- Índices para tabela `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`);
 
 --
--- Índices de tabela `users_following`
+-- Índices para tabela `users_following`
 --
 ALTER TABLE `users_following`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_user_active` (`id_user_active`,`id_user_passive`),
+  ADD KEY `id_user_passive` (`id_user_passive`);
 
 --
--- AUTO_INCREMENT de tabelas apagadas
+-- AUTO_INCREMENT de tabelas despejadas
 --
 
 --
 -- AUTO_INCREMENT de tabela `photos`
 --
 ALTER TABLE `photos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de tabela `photos_comments`
 --
 ALTER TABLE `photos_comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de tabela `photos_likes`
 --
 ALTER TABLE `photos_likes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de tabela `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de tabela `users_following`
 --
 ALTER TABLE `users_following`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- Restrições para despejos de tabelas
+--
+
+--
+-- Limitadores para a tabela `photos`
+--
+ALTER TABLE `photos`
+  ADD CONSTRAINT `photos_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Limitadores para a tabela `photos_comments`
+--
+ALTER TABLE `photos_comments`
+  ADD CONSTRAINT `photos_comments_ibfk_1` FOREIGN KEY (`id_photo`) REFERENCES `photos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `photos_comments_ibfk_2` FOREIGN KEY (`id_user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Limitadores para a tabela `photos_likes`
+--
+ALTER TABLE `photos_likes`
+  ADD CONSTRAINT `photos_likes_ibfk_1` FOREIGN KEY (`id_photo`) REFERENCES `photos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `photos_likes_ibfk_2` FOREIGN KEY (`id_user`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Limitadores para a tabela `users_following`
+--
+ALTER TABLE `users_following`
+  ADD CONSTRAINT `users_following_ibfk_1` FOREIGN KEY (`id_user_active`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `users_following_ibfk_2` FOREIGN KEY (`id_user_passive`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
