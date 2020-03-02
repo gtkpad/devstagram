@@ -61,6 +61,18 @@ class Users extends \Core\Model
         }
         return $info;
     }
+
+    public function getFeed($offset = 0, $limit = 10)
+    {
+        $following = (new Users_following())->getFollowing($this->id);
+
+        $photos = new Photos();
+
+        return $photos->getFeedCollection($following, $offset, $limit);
+    }
+
+
+
     public function createJwt()
     {
         return Jwt::create(array('id_user' => $this->id_user));

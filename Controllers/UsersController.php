@@ -3,6 +3,7 @@
 namespace Controllers;
 
 use \Core\Controller;
+use Models\Photos;
 use \Models\Users;
 
 class UsersController extends Controller
@@ -45,7 +46,7 @@ class UsersController extends Controller
 
     public function new_record()
     {
-        $response = ['error' => ''];
+        $response = ['status' => 0, 'error' => ''];
         $method = $this->getMethod();
         $data = $this->getRequestData();
 
@@ -55,6 +56,7 @@ class UsersController extends Controller
                     $users = new Users();
                     if ($users->register($data['name'], $data['email'], $data['pass'])) {
                         $response['jwt'] = $users->createJwt();
+                        $response['status'] = 1;
                     } else {
                         $response['error'] = 'Email já cadastrado';
                     }
@@ -72,7 +74,7 @@ class UsersController extends Controller
 
     public function view($id)
     {
-        $response = ['error' => '', 'logged' => false];
+        $response = ['status' => 0, 'error' => '', 'logged' => false];
         $method = $this->getMethod();
         $data = $this->getRequestData();
 
@@ -81,12 +83,13 @@ class UsersController extends Controller
             if (!is_null($user)) {
                 $response['logged'] = true;
                 $response['is_me'] = false;
-                if ($id == $user->id) $response['is_me'] = true;
+                if ($id === $user->id) $response['is_me'] = true;
                     $validate = (new Users())->findById($id);
                     if (!is_null($validate)) {
                         switch ($method) {
                             case 'GET':
                                 $response['data'] = $validate->getInfo($id);
+                                $response['status'] = 1;
                                 break;
                             case 'PUT':
                                 if ($response['is_me']) {
@@ -108,13 +111,25 @@ class UsersController extends Controller
                                     }
                                     $validate->save();
                                     $response['data'] = $validate->getInfo($id);
+                                    $response['status'] = 1;
                                 } else {
                                     $response['error'] = 'Não é possível alterar outro Usuário';
                                 }
                                 break;
 
                             case 'DELETE':
-
+                                if ($response['is_me']) {
+                                    $requestUser = (new Users())->findById($id);
+                                    if (!is_null($requestUser)) {
+                                        if ($requestUser->destroy()) {
+                                            $response['status'] = 1;
+                                        }
+                                    } else {
+                                        $response['error'] = "Usuário não encontrado";
+                                    }
+                                } else {
+                                    $response['error'] = 'Não é possível excluir outro Usuário';
+                                }
                                 break;
 
                             default:
@@ -132,6 +147,37 @@ class UsersController extends Controller
             $response['error'] = "Token não enviado";
         }
 
+        $this->returnJson($response);
+    }
+
+    public function feed()
+    {
+        $response = ['status' => 0, 'error' => ''];
+        $method = $this->getMethod();
+        $data = $this->getRequestData();
+        if (!empty($data['jwt'])) {
+            $user = (new Users())->validateJwt($data['jwt']);
+            if(!is_null($user)) {
+                $response['logged'] = true;
+                if ($method == 'GET') {
+                    $offset = 0;
+                    if (!empty($data['offset']) && is_numeric($data['offset'])) {
+                        $offset = intval($data['offset']);
+                    }
+                    $perPage = 10;
+                    if (!empty($data['per_page']) && is_numeric($data['per_page'])) {
+                        $perPage = intval($data['per_page']);
+                    }
+                    $response['data'] = $user->getFeed($offset, $perPage);
+                } else {
+                    $response['error'] = "Método de requisição incompatível";
+                }
+            } else {
+                $response['error'] = "Token Inválido";
+            }
+        } else {
+            $response['error'] = "Token não enviado";
+        }
         $this->returnJson($response);
     }
 }

@@ -264,6 +264,14 @@ class Model
         }
     }
 
+    public function destroy()
+    {
+        $primary = $this->primary;
+        if (!empty($this->$primary)) {
+            return $this->delete([$primary => $this->$primary]);
+        }
+    }
+
     public function validId($id)
     {
         if (is_int($id)) {
