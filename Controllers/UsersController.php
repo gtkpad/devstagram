@@ -164,11 +164,46 @@ class UsersController extends Controller
                     if (!empty($data['offset']) && is_numeric($data['offset'])) {
                         $offset = intval($data['offset']);
                     }
-                    $perPage = 10;
-                    if (!empty($data['per_page']) && is_numeric($data['per_page'])) {
-                        $perPage = intval($data['per_page']);
+                    $limit = 10;
+                    if (!empty($data['limit']) && is_numeric($data['limit'])) {
+                        $limit = intval($data['limit']);
                     }
-                    $response['data'] = $user->getFeed($offset, $perPage);
+                    $response['data'] = $user->getFeed($offset, $limit);
+                } else {
+                    $response['error'] = "Método de requisição incompatível";
+                }
+            } else {
+                $response['error'] = "Token Inválido";
+            }
+        } else {
+            $response['error'] = "Token não enviado";
+        }
+        $this->returnJson($response);
+    }
+
+    public function photos($id)
+    {
+        $response = ['status' => 0, 'error' => ''];
+        $method = $this->getMethod();
+        $data = $this->getRequestData();
+        if (!empty($data['jwt'])) {
+            $user = (new Users())->validateJwt($data['jwt']);
+            if (!is_null($user)) {
+                $response['logged'] = true;
+                $response['is_me'] = false;
+                if ($user->id === $id) $response['is_me'] = true;
+
+                if ($method == 'GET') {
+                    $photos = new Photos();
+                    $offset = 0;
+                    if (!empty($data['offset']) && is_numeric($data['offset'])) {
+                        $offset = intval($data['offset']);
+                    }
+                    $limit = 10;
+                    if (!empty($data['limit']) && is_numeric($data['limit'])) {
+                        $limit = intval($data['limit']);
+                    }
+                    $response['data'] = $photos->getPhotosFromUser($id, $offset, $limit);
                 } else {
                     $response['error'] = "Método de requisição incompatível";
                 }
