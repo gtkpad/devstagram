@@ -11,7 +11,5 @@ class HomeController extends Controller{
 
         $this->returnJson($this->getRequestData());
     }
-    public function testando(){
-        echo "funciona";
-    }
+
 }
